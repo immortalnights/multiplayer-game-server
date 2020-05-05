@@ -1,0 +1,27 @@
+{
+  "name": "multiplayer-game-server",
+  "version": "0.1.0",
+  "description": "Simple multi-game multiplayer game server",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/immortalnights/multiplayer-game-server.git"
+  },
+  "author": "",
+  "license": "GPL-3.0",
+  "bugs": {
+    "url": "https://github.com/immortalnights/multiplayer-game-server/issues"
+  },
+  "homepage": "https://github.com/immortalnights/multiplayer-game-server#readme",
+  "dependencies": {
+    "express": "^4.17.1",
+    "node-env-run": "^3.0.2",
+    "nodemon": "^2.0.3",
+    "socket.io": "^2.3.0",
+    "underscore": "^1.10.2",
+    "uuid": "^8.0.0"
+  }
+}
