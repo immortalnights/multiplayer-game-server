@@ -280,7 +280,7 @@ class Grid
 		else
 		{
 			this.display(true);
-			console.error(`Cannot overwrite value at (${location.x}, ${location.y})`);
+			console.error(`Cannot overwrite value '${value}' at (${location.x}, ${location.y})`);
 		}
 
 		return ok;
