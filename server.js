@@ -11,13 +11,22 @@ const PRETTIFY_JSON_RESPONSES = true;
 module.exports = class Server {
 	constructor(options)
 	{
-		if (!options || options.createGame)
+		if (!options || !options.createGame)
 		{
-			console.error("Missing createGame callback");
+			console.error("Server: Missing createGame callback");
 		}
 
-		this.createLobby = (options && options.createLobby) ? options.createLobby : options => { console.warn("Using default Lobby"); return new Lobby(options) };
-		this.createGame = (options && options.createGame) ? options.createGame : options => { console.error("Game has not been specified"); };
+		const defaultCreateLobby = options => {
+			console.warn("Server: Using default Lobby");
+			return new Lobby(options)
+		};
+
+		const defaultCreateGame = options => {
+			console.error("Server: Game has not been specified");
+		};
+
+		this.createLobby = (options && options.createLobby) ? options.createLobby : defaultCreateLobby;
+		this.createGame = (options && options.createGame) ? options.createGame : defaultCreateGame;
 		this.lobbies = [];
 		this.games = [];
 	}
@@ -26,7 +35,7 @@ module.exports = class Server {
 	{
 		this.initializeExpresServer();
 		this.initializeSocketServer();
-		server.listen(port, () => { console.log(`Server running on localhost:${port}`); });
+		server.listen(port, () => { console.log(`Server: Running on localhost:${port}`); });
 	}
 
 	initializeExpresServer()
@@ -75,10 +84,11 @@ module.exports = class Server {
 			}
 			else
 			{
+				console.log(`Web: Create game`, (req.body || null));
 				res.setHeader('Content-Type', 'application/json');
 
 				const createGame = ({ lobby }) => {
-					console.assert(lobby);
+					console.assert(lobby, `Web invalid Lobby!`);
 
 					const options = { io, players: lobby.players.map(p => p), host: lobby.host, closeGame: () => {} }
 					const game = this.createGame(options);
@@ -139,32 +149,32 @@ module.exports = class Server {
 
 			if (!userID)
 			{
-				console.error(`Missing user ID`);
-				next(new Error(`Missing user ID`));
+				console.error(`Socket: Missing user ID`);
+				next(new Error(`Socket: Missing user ID`));
 			}
 			else if (!lobby)
 			{
-				console.error(`Lobby ${lobbyID} does not exist`);
-				next(new Error(`Lobby ${lobbyID} does not exist`));
+				console.error(`Socket: Lobby ${lobbyID} does not exist`);
+				next(new Error(`Socket: Lobby ${lobbyID} does not exist`));
 			}
 			else
 			{
-				console.log("join", lobby.status, lobby.isFull())
+				console.log(`Socket: Join ${lobby.status}, ${lobby.isFull()}`);
 				if (lobby.status === 'PENDING' && lobby.isFull() === false)
 				{
-					console.log(`Lobby ${lobby.id} exists`);
+					console.log(`Socket: Lobby ${lobby.id} exists`);
 					next();
 				}
 				else
 				{
-					console.error(`Cannot join lobby, incorrect state`, lobby.status);
-					next(new Error(`Lobby ${lobbyID} is locked`));
+					console.error(`Socket: Cannot join lobby, incorrect state`, lobby.status);
+					next(new Error(`Socket: Lobby ${lobbyID} is locked`));
 				}
 			}
 		});
 
 		io.of('/lobby').on('connection', (client) => {
-			console.log(`client ${client.id} connected to lobby channel`);
+			console.log(`Socket: Client ${client.id} connected to lobby channel`);
 
 			const userID = client.handshake.query.user;
 			const lobbyID = client.handshake.query.lobby;
@@ -183,11 +193,11 @@ module.exports = class Server {
 					player.on('lobby:addAIOpponent', () => {
 						if (lobby.host !== player.id)
 						{
-							console.error(`Player ${player.id} tried to add an AI player, but is not the host`);
+							console.error(`Socket: Player ${player.id} tried to add an AI player, but is not the host`);
 						}
 						else if (lobby.isFull())
 						{
-							console.error(`Cannot add AI player, lobby is full`);
+							console.error(`Socket: Cannot add AI player, lobby is full`);
 						}
 						else
 						{
@@ -209,13 +219,13 @@ module.exports = class Server {
 				});
 
 				player.on('error', (client) => {
-					console.error("Client socket error!");
+					console.error("Socket: Client socket error!");
 				});
 
 				player.on('disconnect', () => {
 					lobby.handleLeave(player.id);
 
-					console.log(`client '${client.id}' disconnected from lobby channel`);
+					console.log(`Socket: Client '${client.id}' disconnected from lobby channel`);
 				});
 			}
 			else
@@ -225,7 +235,7 @@ module.exports = class Server {
 		});
 
 		io.of('/lobby').on('error', (socket) => {
-			console.error("Socket error!");
+			console.error("Socket: Socket error!");
 		});
 
 		io.of('/game').use((socket, next) => {
@@ -235,28 +245,28 @@ module.exports = class Server {
 
 			if (!userID)
 			{
-				console.error(`Missing user ID`);
-				next(new Error(`Missing user ID`));
+				console.error(`Socket: Missing user ID`);
+				next(new Error(`Socket: Missing user ID`));
 			}
 			else if (!game)
 			{
-				console.error(`Game ${gameID} does not exist`);
-				next(new Error(`Game ${gameID} does not exist`));
+				console.error(`Socket: Game ${gameID} does not exist`);
+				next(new Error(`Socket: Game ${gameID} does not exist`));
 			}
 			else if (!game.isAuthorized(userID))
 			{
-				console.error(`Player ${userID} is not authorized to join game ${gameID}`);
-				next(new Error(`Player ${userID} is not authorized to join game ${gameID}`));
+				console.error(`Socket: Player ${userID} is not authorized to join game ${gameID}`);
+				next(new Error(`Socket: Player ${userID} is not authorized to join game ${gameID}`));
 			}
 			else
 			{
-				console.log(`Game ${game.id} exists`);
+				console.log(`Socket: Game ${game.id} exists`);
 				next();
 			}
 		});
 
 		io.of('/game').on('connection', (client) => {
-			console.log(`client ${client.id} connected to game channel`);
+			console.log(`Socket: client ${client.id} connected to game channel`);
 
 			const userID = client.handshake.query.user;
 			const gameID = client.handshake.query.game;
@@ -267,13 +277,13 @@ module.exports = class Server {
 				const player = game.handleHumanJoin({ id: userID, io: client });
 
 				player.on('error', (client) => {
-					console.error("Client socket error!");
+					console.error(`Socket: Client socket error!`);
 				});
 
 				player.on('disconnect', () => {
 					game.handleLeave(player.id);
 
-					console.log(`client '${client.id}' disconnected from game channel`);
+					console.log(`Socket: client '${client.id}' disconnected from game channel`);
 				});
 
 				if (game.isReady())
@@ -290,7 +300,7 @@ module.exports = class Server {
 		});
 
 		io.of('/game').on('error', (socket) => {
-			console.error("Socket error!");
+			console.error("Socket: Socket error!");
 		});
 	}
 }

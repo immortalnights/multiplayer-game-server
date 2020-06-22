@@ -3,7 +3,6 @@ const uuid = require('uuid').v1;
 module.exports = class Player {
 	constructor(options)
 	{
-		console.log("BasePlayer", Object.keys(options));
 		this.id = options.id;
 		this.io = options.io;
 		this.team = options.team;

@@ -23,12 +23,12 @@ module.exports = class Game {
 			closeGame: closeGame
 		};
 
-		console.log(`Game ${this.id} initialized (${this.players.length})`);
+		console.log(`Game: ${this.id} initialized (${this.players.length})`);
 	}
 
 	initializeAIPlayers(players)
 	{
-		console.log(`AI players are joining the game`);
+		console.log(`Game: AI players are joining the game`);
 		players.forEach(p => {
 			let ok = false;
 			if (p.artifical)
@@ -36,22 +36,22 @@ module.exports = class Game {
 				if (this.isAuthorized(p.id))
 				{
 					const ai = this.handleAIJoin(p);
-					console.log(`AI Player ${ai.id} has joined the game`);
+					console.log(`Game: AI Player ${ai.id} has joined the game`);
 					ok = true;
 				}
 				else
 				{
-					console.error(`AI Player ${p.id} is not authorized`);
+					console.error(`Game: AI Player ${p.id} is not authorized`);
 				}
 			}
 			else
 			{
-				console.debug(`Waiting for player ${p.id} to join`);
+				console.debug(`Game: Waiting for player ${p.id} to join`);
 			}
 
 			return ok;
 		});
-		console.log(`${this.players.length} AI players have joined`);
+		console.log(`Game: ${this.players.length} AI players have joined`);
 	}
 
 	isEmpty()
@@ -59,9 +59,14 @@ module.exports = class Game {
 		return this.players.length === 0;
 	}
 
+	isPlaying()
+	{
+		return this.status === 'PLAYING';
+	}
+
 	isAuthorized(playerId)
 	{
-		console.log(`${playerId}, ${this.players.length} / ${this.maxPlayers} [${_.pluck(this.authorizedPlayers, 'id')}]`);
+		console.log(`Game: ${playerId}, ${this.players.length} / ${this.maxPlayers} [${_.pluck(this.authorizedPlayers, 'id')}]`);
 		return (this.players.length < this.maxPlayers) && !!this.authorizedPlayers.find(auth => auth.id === playerId);
 	}
 
@@ -70,12 +75,12 @@ module.exports = class Game {
 		let ready = false;
 		if (this.authorizedPlayers.length === this.players.length)
 		{
-			console.log(`All players have joined the game`);
+			console.log(`Game: All players have joined the game`);
 			ready = true;
 		}
 		else
 		{
-			console.log(`Waiting for ${this.authorizedPlayers.length - this.players.length} more player(s)`);
+			console.log(`Game: Waiting for ${this.authorizedPlayers.length - this.players.length} more player(s)`);
 		}
 
 		return ready;
@@ -84,10 +89,9 @@ module.exports = class Game {
 	// override to create game specialized player
 	handleHumanJoin(details)
 	{
-		console.log(`Human player ${details.id} is joining the game`);
+		console.log(`Game: Human player ${details.id} is joining the game`);
 		const auth = this.authorizedPlayers.find(auth => auth.id === details.id);
-		// console.log("auth", auth);
-		console.assert(auth, `Failed to find authorized player details for player ${details.id}`);
+		console.assert(auth, `Game: Failed to find authorized player details for player ${details.id}`);
 		_.extend(details, auth);
 
 		const player = this.initHumanPlayer({ ...details, game: this });
@@ -99,10 +103,9 @@ module.exports = class Game {
 	// override to create game specialized AI
 	handleAIJoin(details)
 	{
-		console.log(`AI player ${details.id} is joining the game`);
+		console.log(`Game: AI player ${details.id} is joining the game`);
 		const auth = this.authorizedPlayers.find(auth => auth.id === details.id);
-		// console.log("auth", auth);
-		console.assert(auth, `Failed to find authorized player details for player ${details.id}`);
+		console.assert(auth, `Game: Failed to find authorized player details for player ${details.id}`);
 		_.extend(details, auth);
 
 		const player = this.initComputerPlayer({ ...details, game: this });
@@ -112,8 +115,8 @@ module.exports = class Game {
 
 	handleJoin(player)
 	{
-		console.log(`Player ${player.id} is joining the game`);
-		console.assert(player instanceof Player, "Invalid player class");
+		console.log(`Game: Player ${player.id} is joining the game`);
+		console.assert(player instanceof Player, `Game: Invalid player class`);
 
 		player.status = 'READY';
 		this.broadcast('game:player:joined', player.serialize());
@@ -129,7 +132,7 @@ module.exports = class Game {
 
 		player.send('game:update', this.serialize());
 
-		console.log(`Player ${player.id} joined game ${this.id}`);
+		console.log(`Game: Player ${player.id} joined game ${this.id}`);
 	}
 
 	begin()
@@ -153,7 +156,7 @@ module.exports = class Game {
 
 			this.players.splice(index, 1);
 			this.broadcast('game:player:left', player.serialize());
-			console.log(`Player ${player.id} left game ${this.id}`);
+			console.log(`Game: Player ${player.id} left game ${this.id}`);
 
 			if (this.players.length <= 1)
 			{

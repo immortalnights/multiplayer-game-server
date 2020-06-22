@@ -12,7 +12,12 @@ module.exports = class Lobby {
 		this.status = 'PENDING';
 
 		this.players = [];
-		this.maxPlayers = 2;
+		this.playerLimits = {
+			min: 1,
+			max: 2
+		};
+		// deprecated
+		this.maxPlayers = this.playerLimits.max;
 		this.host = host;
 
 		this.teamFlags = TeamFlags.None;
@@ -34,7 +39,7 @@ module.exports = class Lobby {
 
 	isFull()
 	{
-		return this.maxPlayers !== null && (this.players.length === this.maxPlayers);
+		return this.playerLimits.max !== null && (this.players.length === this.playerLimits.max);
 	}
 
 	close()
@@ -44,7 +49,7 @@ module.exports = class Lobby {
 		});
 		this.players = [];
 		this.status = 'CLOSED';
-		this.maxPlayers = 0;
+		this.playerLimits.max = 0;
 	}
 
 	handleJoin(player)
@@ -57,7 +62,7 @@ module.exports = class Lobby {
 		if ((this.teamFlags & TeamFlags.Required) === TeamFlags.Required)
 		{
 			const definedTeams = _.isEmpty(this.teams) === false;
-			console.assert(definedTeams, "Player teams must be defined for 'Required' team play");
+			console.assert(definedTeams, `Lobby: Player teams must be defined for 'Required' team play`);
 			if (definedTeams)
 			{
 				// Place the new player into the first available team
@@ -83,12 +88,12 @@ module.exports = class Lobby {
 
 				if (availableTeam)
 				{
-					console.log(`Player ${player.id} has jointed team ${availableTeam.id}`);
+					console.log(`Lobby: Player ${player.id} has jointed team ${availableTeam.id}`);
 					player.team = availableTeam.id;
 				}
 				else
 				{
-					console.error("Failed to find free team for player", player.id);
+					console.error(`Lobby: Failed to find free team for player ${player.id}`);
 				}
 			}
 		}
@@ -96,7 +101,7 @@ module.exports = class Lobby {
 		this.players.push(player);
 
 		this.broadcast('lobby:update', this.serialize());
-		console.log(`Player ${player.id} joined lobby ${this.id}`);
+		console.log(`Lobby: Player ${player.id} joined lobby ${this.id}`);
 	}
 
 	handleLeave(playerId)
@@ -109,7 +114,7 @@ module.exports = class Lobby {
 
 			this.players.splice(index, 1);
 			this.broadcast('lobby:player:left', player.serialize());
-			console.log(`Player ${player.id} left lobby ${this.id}`);
+			console.log(`Lobby: Player ${player.id} left lobby ${this.id}`);
 
 			if (this.players.length <= 1)
 			{
@@ -134,21 +139,21 @@ module.exports = class Lobby {
 
 	changeTeam(playerId, teamId)
 	{
-		console.log(playerId, teamId);
+		console.log(`Lobby: changeTeam ${playerId}, ${teamId}`);
 		const player = this.players.find(p => p.id === playerId);
 		const team = this.teams.find(t => t.id === teamId);
 
 		if (_.isEmpty(this.teams))
 		{
-			console.error("Lobby has no defined teams");
+			console.error(`Lobby: Lobby has no defined teams`);
 		}
 		else if (!player)
 		{
-			console.error(`Player ${playerId} does not exist`);
+			console.error(`Lobby: Player ${playerId} does not exist`);
 		}
 		else if (!team)
 		{
-			console.error(`Selected team ${teamId} does not exist`);
+			console.error(`Lobby: Selected team ${teamId} does not exist`);
 		}
 		else
 		{
@@ -159,17 +164,17 @@ module.exports = class Lobby {
 				if (otherTeamPlayer)
 				{
 					otherTeamPlayer.team = player.team;
-					console.log(`Player ${otherTeamPlayer.id} has joined team ${player.team}`);
+					console.log(`Lobby: Player ${otherTeamPlayer.id} has joined team ${player.team}`);
 				}
 
 				player.team = team.id;
-				console.log(`Player ${player.id} has joined team ${team.id}`);
+				console.log(`Lobby: Player ${player.id} has joined team ${team.id}`);
 			}
 			else
 			{
 				// FIX ME - implement maxPlayers properly
 				player.team = team.id;
-				console.log(`Player ${player.id} has joined team ${team.id}`);
+				console.log(`Lobby: Player ${player.id} has joined team ${team.id}`);
 			}
 
 			this.broadcast('lobby:update', this.serialize());
@@ -178,23 +183,28 @@ module.exports = class Lobby {
 
 	toggleReady(playerId)
 	{
+		const haveReadyPlayers = () => {
+			return this.players.length >= this.playerLimits.min && this.players.every(p => p.ready);
+		};
+
 		const index = this.players.findIndex(p => p.id === playerId);
 		if (index !== -1)
 		{
 			const player = this.players[index];
 
 			player.ready = !player.ready;
+			console.log(`Lobby: Player ${player.id} is ${!player.ready ? 'not ' : ''}ready`)
 			this.broadcast('lobby:player:update', player.serialize());
 		}
 
-		if (this.players.length > 1 && this.players.every(p => p.ready))
+		if (haveReadyPlayers())
 		{
-			console.log("all players are ready");
+			console.log("Lobby: All players are ready");
 			this.status = 'STARTING';
 			this.beginCountdown(() => {
-				return (this.players.length > 1 && this.players.every(p => p.ready))
+				return (haveReadyPlayers())
 			}).then(() => {
-				if (this.players.length > 1 && this.players.every(p => p.ready))
+				if (haveReadyPlayers())
 				{
 					this.status = 'READY';
 					const game = this.callbacks.createGame({ lobby: this });
@@ -205,7 +215,7 @@ module.exports = class Lobby {
 					}
 					else
 					{
-						console.error("Failed to create game");
+						console.error("Lobby: Failed to create game");
 					}
 				}
 				else
@@ -273,11 +283,10 @@ module.exports = class Lobby {
 			id: this.id,
 			name: this.name,
 			players: this.players.map((p) => p.serialize()),
-			maxPlayers: this.maxPlayers,
+			playerLimits: this.playerLimits,
 			host: this.host,
 			status: this.status,
 			countdown: this.countdown
-			// gameId: this.gameId
 		};
 	}
 }

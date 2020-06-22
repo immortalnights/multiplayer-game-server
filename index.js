@@ -1,5 +1,11 @@
 const Server = require('./server');
-const Game = require('./game');
+const Lobby = require('./lobby');
+const BaseGame = require('./game');
+const TurnBasedGame = require('./turnbasedgame');
 
-const s = new Server({ createGame: (options) => { return new Game(options); } });
-s.start(process.env.port || 3001);
+module.exports = {
+	Server,
+	Lobby,
+	BaseGame,
+	TurnBasedGame
+};
