@@ -19,7 +19,7 @@
   "homepage": "https://github.com/immortalnights/multiplayer-game-server#readme",
   "dependencies": {
     "express": "^4.17.1",
-    "socket.io": "^2.3.0",
+    "socket.io": "^2.4.0",
     "underscore": "^1.10.2",
     "uuid": "^8.0.0"
   },
