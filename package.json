@@ -20,7 +20,7 @@
   "dependencies": {
     "express": "^4.17.1",
     "socket.io": "^2.3.0",
-    "underscore": "^1.10.2",
+    "underscore": "^1.12.1",
     "uuid": "^8.0.0"
   },
   "devDependencies": {
